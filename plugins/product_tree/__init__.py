@@ -54,7 +54,11 @@ class ProductTreePlugin(UrlsMixin, NavigationMixin, InvenTreePlugin):
 
     # Add a nav item that links to our landing page (template provides picker / docs)
     NAVIGATION = [
-        {"name": "Product Tree", "link": "product-tree-home", "icon": "fa-sitemap"}
+        {
+            "name": "Product Tree",
+            "link": "plugin:product_tree:product-tree-home",
+            "icon": "fa-sitemap",
+        }
     ]
 
     # ---- URLS ----
