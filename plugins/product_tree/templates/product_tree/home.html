@@ -46,7 +46,7 @@
     if (!input || !input.value) {
       return;
     }
-    const baseUrl = "{% url 'product-tree-home' %}";
+    const baseUrl = "{% url 'plugin:product_tree:product-tree-home' %}";
     window.location.href = `${baseUrl}${encodeURIComponent(input.value)}/`;
   }
 

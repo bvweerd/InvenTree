@@ -7,7 +7,7 @@
 
 {% block breadcrumbs %}
 <li class="breadcrumb-item">
-  <a href="{% url 'product-tree-home' %}">{% trans "Product Tree" %}</a>
+  <a href="{% url 'plugin:product_tree:product-tree-home' %}">{% trans "Product Tree" %}</a>
 </li>
 <li class="breadcrumb-item active" aria-current="page">{{ part.name }}</li>
 {% endblock breadcrumbs %}
@@ -62,7 +62,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script src="{% static 'product_tree/tree.js' %}"></script>
 <script>
-  const dataUrl = "{% url 'product-tree-data' pk=part.pk %}";
+  const dataUrl = "{% url 'plugin:product_tree:product-tree-data' pk=part.pk %}";
   function reloadTree(){
     const depthInput = document.getElementById('maxDepth');
     const substitutesInput = document.getElementById('includeSubstitutes');
