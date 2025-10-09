@@ -144,3 +144,5 @@ export function renderHierarchyPanel(target, data) {
 
     target.appendChild(container);
 }
+
+export const renderPanel = renderHierarchyPanel;

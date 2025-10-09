@@ -80,9 +80,7 @@ class AssemblyHierarchyPlugin(
                 'key': 'assembly-hierarchy-panel',
                 'title': _('Assembly hierarchy'),
                 'icon': 'fa6-solid:sitemap',
-                'source': self.plugin_static_file(
-                    'panel.js:renderHierarchyPanel'
-                ),
+                'source': self.plugin_static_file('panel.js'),
                 'context': {
                     'detail_url': detail_url,
                     'index_url': reverse('plugin:assembly-hierarchy:index'),
