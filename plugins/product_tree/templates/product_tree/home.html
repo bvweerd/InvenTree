@@ -1,0 +1,29 @@
+
+{% extends "page_base.html" %}
+{% load i18n %}
+{% block heading %}{% trans "Product Tree" %}{% endblock %}
+{% block content %}
+<div class="panel panel-default">
+  <div class="panel-heading"><strong>{% trans "Visualize a part's BOM hierarchy" %}</strong></div>
+  <div class="panel-body">
+    <p>{% trans "Enter a Part ID (primary key) to view its product tree." %}</p>
+    <form method="get" action="" onsubmit="event.preventDefault(); goToPart();">
+      <div class="form-inline">
+        <label for="pt-part-id" class="control-label">Part ID</label>
+        <input id="pt-part-id" type="number" class="form-control" placeholder="e.g. 123" min="1" required />
+        <button class="btn btn-primary" onclick="goToPart()">{% trans "Open" %}</button>
+      </div>
+    </form>
+    <p class="help-block">
+      Tip: open any part in InvenTree and copy the numeric id from the URL (<code>/part/&lt;id&gt;/</code>).
+    </p>
+  </div>
+</div>
+<script>
+  function goToPart(){
+    const v = document.getElementById('pt-part-id').value;
+    if(!v) return;
+    window.location.href = window.location.origin + '/plugin/product_tree/tree/' + v + '/';
+  }
+</script>
+{% endblock %}

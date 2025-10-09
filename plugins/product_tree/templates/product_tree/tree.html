@@ -1,0 +1,37 @@
+
+{% extends "page_base.html" %}
+{% load i18n static %}
+{% block heading %}{{ part.name }} ({{ part.pk }}) — {% trans "Product Tree" %}{% endblock %}
+{% block content %}
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <strong>{% trans "BOM hierarchy" %}</strong>
+    <div class="pull-right">
+      <label>Max depth:
+        <input id="maxDepth" type="number" class="form-control input-sm" value="10" min="1" style="width:80px; display:inline-block;" />
+      </label>
+      <button class="btn btn-sm btn-default" onclick="reloadTree()">{% trans "Reload" %}</button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div id="graph" style="white-space: pre; overflow:auto;"></div>
+    <pre id="errors" style="color:#a94442;"></pre>
+  </div>
+</div>
+
+<!-- Mermaid (CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script src="{% static 'product_tree/tree.js' %}"></script>
+<script>
+  const detailUrl = "{% url 'product-tree-detail' pk=part.pk %}";
+  const dataUrl = "{% url 'product-tree-data' pk=part.pk %}";
+  function reloadTree(){
+    const md = document.getElementById('maxDepth').value || 10;
+    window.ProductTree.renderMermaidFromEndpoint(dataUrl + '?max_depth=' + md, 'graph', 'errors');
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.mermaid) { window.mermaid.initialize({startOnLoad: false}); }
+    reloadTree();
+  });
+</script>
+{% endblock %}
