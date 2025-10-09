@@ -1,33 +1,60 @@
+{% extends "base.html" %}
+{% load i18n static inventree_extras %}
 
-{% extends "page_base.html" %}
-{% load i18n static %}
-{% block heading %}{{ part.name }} ({{ part.pk }}) — {% trans "Product Tree" %}{% endblock %}
+{% block page_title %}
+{% inventree_title %} | {{ part.name }} — {% trans "Product Tree" %}
+{% endblock page_title %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item">
+  <a href="{% url 'product-tree-home' %}">{% trans "Product Tree" %}</a>
+</li>
+<li class="breadcrumb-item active" aria-current="page">{{ part.name }}</li>
+{% endblock breadcrumbs %}
+
 {% block content %}
-<div class="panel panel-default">
-  <div class="panel-heading">
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+  <div>
+    <h1 class="h3 mb-0">{{ part.name }}</h1>
+    <p class="text-muted mb-0">{% blocktrans %}Part ID: {{ part.pk }}{% endblocktrans %}</p>
+  </div>
+  {% if part.get_absolute_url %}
+  <a class="btn btn-outline-secondary" href="{{ part.get_absolute_url }}">
+    <span class="fas fa-box-open me-1" aria-hidden="true"></span>
+    {% trans "View part" %}
+  </a>
+  {% endif %}
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-3">
     <strong>{% trans "BOM hierarchy" %}</strong>
-    <div class="pull-right" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <label>{% trans "Max depth" %}:
+    <div class="d-flex align-items-center flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-2">
+        <label class="form-label mb-0" for="maxDepth">{% trans "Max depth" %}</label>
         <input
           id="maxDepth"
           type="number"
-          class="form-control input-sm"
+          class="form-control form-control-sm"
           value="{{ default_max_depth }}"
           min="0"
           max="{{ max_depth_limit }}"
-          style="width:80px; display:inline-block;"
+          style="max-width: 6rem;"
         />
-      </label>
-      <label class="checkbox-inline" style="margin:0;">
-        <input type="checkbox" id="includeSubstitutes" />
-        {% trans "Include substitutes" %}
-      </label>
-      <button class="btn btn-sm btn-default" onclick="reloadTree()">{% trans "Reload" %}</button>
+      </div>
+      <div class="form-check mb-0">
+        <input class="form-check-input" type="checkbox" id="includeSubstitutes" />
+        <label class="form-check-label" for="includeSubstitutes">{% trans "Include substitutes" %}</label>
+      </div>
+      <button class="btn btn-sm btn-outline-primary" type="button" onclick="reloadTree()">
+        <span class="fas fa-sync-alt me-1" aria-hidden="true"></span>
+        {% trans "Reload" %}
+      </button>
     </div>
   </div>
-  <div class="panel-body">
-    <div id="graph" style="white-space: pre; overflow:auto;"></div>
-    <pre id="errors" style="color:#a94442;"></pre>
+  <div class="card-body">
+    <div id="graph" class="border rounded p-3 bg-body-tertiary" style="white-space: pre; overflow:auto;"></div>
+    <pre id="errors" class="text-danger mt-3 mb-0"></pre>
   </div>
 </div>
 
@@ -35,7 +62,6 @@
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 <script src="{% static 'product_tree/tree.js' %}"></script>
 <script>
-  const detailUrl = "{% url 'product-tree-detail' pk=part.pk %}";
   const dataUrl = "{% url 'product-tree-data' pk=part.pk %}";
   function reloadTree(){
     const depthInput = document.getElementById('maxDepth');
@@ -52,4 +78,4 @@
     reloadTree();
   });
 </script>
-{% endblock %}
+{% endblock content %}
