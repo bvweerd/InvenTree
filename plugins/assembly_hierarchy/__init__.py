@@ -40,7 +40,7 @@ class AssemblyHierarchyPlugin(
     DESCRIPTION = _(
         'Visualise the complete Bill of Materials hierarchy for any assembly part.'
     )
-    VERSION = '1.0'
+    VERSION = '1.1'
 
     NAVIGATION = [
         {
@@ -49,6 +49,49 @@ class AssemblyHierarchyPlugin(
             'icon': 'fas fa-sitemap',
         }
     ]
+
+    def get_ui_panels(self, request, context, **kwargs):
+        """Expose the hierarchy viewer as a panel on the part detail page."""
+
+        context = context or {}
+        target_model = context.get('target_model')
+        target_id = context.get('target_id')
+
+        if target_model != 'part' or target_id is None:
+            return []
+
+        try:
+            part_id = int(target_id)
+        except (TypeError, ValueError):
+            return []
+
+        try:
+            part = Part.objects.get(pk=part_id)
+        except Part.DoesNotExist:
+            return []
+
+        detail_url = reverse(
+            'plugin:assembly-hierarchy:assembly-detail',
+            kwargs={'pk': part.pk},
+        )
+
+        return [
+            {
+                'key': 'assembly-hierarchy-panel',
+                'title': _('Assembly hierarchy'),
+                'icon': 'fa6-solid:sitemap',
+                'source': self.plugin_static_file(
+                    'panel.js:renderHierarchyPanel'
+                ),
+                'context': {
+                    'detail_url': detail_url,
+                    'index_url': reverse('plugin:assembly-hierarchy:index'),
+                    'is_assembly': part.assembly,
+                    'has_bom': part.has_bom,
+                    'part_name': part.full_name,
+                },
+            }
+        ]
 
     def get_ui_navigation_items(self, request, context, **kwargs):
         """Expose a navigation tab entry for the React interface."""
@@ -144,7 +187,15 @@ class AssemblyHierarchyPlugin(
                 'Dit onderdeel is niet gemarkeerd als assembly maar kan wel een stuklijst hebben.'
             )
 
-        return render(request, 'assembly_hierarchy/hierarchy.html', context)
+        embed_mode = request.GET.get('embed') == '1'
+        template_name = 'assembly_hierarchy/hierarchy.html'
+
+        if embed_mode:
+            template_name = 'assembly_hierarchy/panel.html'
+
+        context['embed'] = embed_mode
+
+        return render(request, template_name, context)
 
     # endregion
 
