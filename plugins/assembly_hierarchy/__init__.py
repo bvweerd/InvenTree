@@ -15,6 +15,7 @@ from plugin import InvenTreePlugin
 from plugin.mixins import NavigationMixin, UrlsMixin, UserInterfaceMixin
 
 
+
 @dataclass
 class TreeNode:
     """Container representing a single BOM node in the rendered tree."""
