@@ -53,13 +53,34 @@ class AssemblyHierarchyPlugin(
     def get_ui_navigation_items(self, request, context, **kwargs):
         """Expose a navigation tab entry for the React interface."""
 
+        target_url = reverse('plugin:assembly-hierarchy:index')
+
+        if isinstance(context, dict):
+            part_id = None
+
+            if context.get('model') == 'part' and context.get('pk') is not None:
+                part_id = context.get('pk')
+            elif context.get('part') is not None:
+                part_id = context.get('part')
+
+            try:
+                part_id_int = int(part_id) if part_id is not None else None
+            except (TypeError, ValueError):
+                part_id_int = None
+
+            if part_id_int:
+                target_url = reverse(
+                    'plugin:assembly-hierarchy:assembly-detail',
+                    kwargs={'pk': part_id_int},
+                )
+
         return [
             {
                 'key': 'assembly-hierarchy-navigation',
                 'title': _('Assembly hierarchy'),
                 'icon': 'fa6-solid:sitemap',
                 'options': {
-                    'url': reverse('plugin:assembly-hierarchy:index'),
+                    'url': target_url,
                 },
             }
         ]
