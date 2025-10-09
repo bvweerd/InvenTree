@@ -12,7 +12,11 @@ window.ProductTree = (function(){
     function nodeLabel(n){
       const name = n.name || '(unnamed)';
       const ipn = n.ipn ? `\nIPN: ${n.ipn}` : '';
-      return `${name}${ipn}`;
+      const cycle = n.cycle ? '\n↻ cycle' : '';
+      const substitutes = Array.isArray(n.substitutes) && n.substitutes.length
+        ? `\nSubs: ${n.substitutes.map(s => s.name || s.ipn || s.id).join(', ')}`
+        : '';
+      return `${name}${ipn}${substitutes}${cycle}`;
     }
 
     function id(n){ return `P${n.id}`; }
@@ -24,9 +28,13 @@ window.ProductTree = (function(){
         seen.add(n.id);
       }
       (n.children || []).forEach(child => {
-        if(child && child.id){
-          const qty = (child.quantity != null) ? `|${child.quantity}|` : '';
-          lines.push(`${id(n)} -->${qty} ${id(child)}`);
+        if(!child || !child.id){ return; }
+
+        const qty = (child.quantity != null) ? `|${child.quantity}|` : '';
+        const connector = child.cycle ? '-.->' : '-->';
+        lines.push(`${id(n)} ${connector}${qty} ${id(child)}`);
+
+        if(!child.cycle){
           walk(child);
         }
       });

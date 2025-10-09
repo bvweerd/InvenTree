@@ -6,9 +6,21 @@
 <div class="panel panel-default">
   <div class="panel-heading">
     <strong>{% trans "BOM hierarchy" %}</strong>
-    <div class="pull-right">
-      <label>Max depth:
-        <input id="maxDepth" type="number" class="form-control input-sm" value="10" min="1" style="width:80px; display:inline-block;" />
+    <div class="pull-right" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <label>{% trans "Max depth" %}:
+        <input
+          id="maxDepth"
+          type="number"
+          class="form-control input-sm"
+          value="{{ default_max_depth }}"
+          min="0"
+          max="{{ max_depth_limit }}"
+          style="width:80px; display:inline-block;"
+        />
+      </label>
+      <label class="checkbox-inline" style="margin:0;">
+        <input type="checkbox" id="includeSubstitutes" />
+        {% trans "Include substitutes" %}
       </label>
       <button class="btn btn-sm btn-default" onclick="reloadTree()">{% trans "Reload" %}</button>
     </div>
@@ -26,8 +38,14 @@
   const detailUrl = "{% url 'product-tree-detail' pk=part.pk %}";
   const dataUrl = "{% url 'product-tree-data' pk=part.pk %}";
   function reloadTree(){
-    const md = document.getElementById('maxDepth').value || 10;
-    window.ProductTree.renderMermaidFromEndpoint(dataUrl + '?max_depth=' + md, 'graph', 'errors');
+    const depthInput = document.getElementById('maxDepth');
+    const substitutesInput = document.getElementById('includeSubstitutes');
+    const md = depthInput ? depthInput.value : {{ default_max_depth }};
+    const params = new URLSearchParams({max_depth: md});
+    if (substitutesInput && substitutesInput.checked){
+      params.append('include_substitutes', '1');
+    }
+    window.ProductTree.renderMermaidFromEndpoint(`${dataUrl}?${params.toString()}`, 'graph', 'errors');
   }
   document.addEventListener('DOMContentLoaded', () => {
     if (window.mermaid) { window.mermaid.initialize({startOnLoad: false}); }
