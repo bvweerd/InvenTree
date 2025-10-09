@@ -1,0 +1,34 @@
+{% load i18n %}
+<ul class="tree-level">
+    {% for node in nodes %}
+        <li>
+            <div class="node-card">
+                <div>
+                    <span class="node-title">{{ node.sub_part.full_name }}</span>
+                    <span class="node-quantity">× {{ node.item.quantity|floatformat:-2 }}</span>
+                </div>
+                <div class="node-meta">
+                    <span class="code">ID {{ node.sub_part.pk }}</span>
+                    {% if node.item.reference %}
+                        <span class="code">{% trans "Referentie" %}: {{ node.item.reference }}</span>
+                    {% endif %}
+                    {% if node.item.optional %}
+                        <span class="badge optional">{% trans "Optioneel" %}</span>
+                    {% endif %}
+                    {% if node.item.consumable %}
+                        <span class="badge consumable">{% trans "Verbruik" %}</span>
+                    {% endif %}
+                    {% if node.cycle %}
+                        <span class="badge cycle">{% trans "Cyclische referentie" %}</span>
+                    {% endif %}
+                </div>
+                {% if node.item.note %}
+                    <p class="node-notes">{{ node.item.note }}</p>
+                {% endif %}
+            </div>
+            {% if node.children %}
+                {% include "assembly_hierarchy/tree.html" with nodes=node.children %}
+            {% endif %}
+        </li>
+    {% endfor %}
+</ul>
