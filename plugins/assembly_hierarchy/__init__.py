@@ -12,7 +12,8 @@ from django.utils.translation import gettext_lazy as _
 
 from part.models import BomItem, Part
 from plugin import InvenTreePlugin
-from plugin.mixins import NavigationMixin, UrlsMixin
+from plugin.mixins import NavigationMixin, UrlsMixin, UserInterfaceMixin
+
 
 
 @dataclass
@@ -28,7 +29,9 @@ class TreeNode:
         return self.item.sub_part
 
 
-class AssemblyHierarchyPlugin(NavigationMixin, UrlsMixin, InvenTreePlugin):
+class AssemblyHierarchyPlugin(
+    UserInterfaceMixin, NavigationMixin, UrlsMixin, InvenTreePlugin
+):
     """Plugin which renders the full BOM hierarchy for an assembly part."""
 
     NAME = 'Assembly Hierarchy'
@@ -46,6 +49,20 @@ class AssemblyHierarchyPlugin(NavigationMixin, UrlsMixin, InvenTreePlugin):
             'icon': 'fas fa-sitemap',
         }
     ]
+
+    def get_ui_navigation_items(self, request, context, **kwargs):
+        """Expose a navigation tab entry for the React interface."""
+
+        return [
+            {
+                'key': 'assembly-hierarchy-navigation',
+                'title': _('Assembly hierarchy'),
+                'icon': 'fa6-solid:sitemap',
+                'options': {
+                    'url': reverse('plugin:assembly-hierarchy:index'),
+                },
+            }
+        ]
 
     def setup_urls(self):  # pragma: no cover - url wiring tested via framework
         return [
