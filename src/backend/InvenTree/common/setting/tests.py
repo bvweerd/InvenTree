@@ -41,6 +41,18 @@ class SettingsValidatorTests(TestCase):
             'test part',
         )
 
+    def test_validate_export_filename_template(self):
+        """Test export filename template validator."""
+
+        self.assertTrue(
+            common.setting.system.validate_export_filename_template(
+                'InvenTree_{{ model }}_{{ date }}'
+            )
+        )
+
+        with self.assertRaises(ValidationError):
+            common.setting.system.validate_export_filename_template('')
+
     def test_update_instance_name_no_multi(self):
         """Test valid cases for update_instance_name."""
         self.assertIsNone(common.setting.system.update_instance_name('abc'))

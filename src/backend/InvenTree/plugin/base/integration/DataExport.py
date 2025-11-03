@@ -3,12 +3,15 @@
 from collections import OrderedDict
 from typing import Optional, Union
 
+from jinja2 import Template
+
 from django.contrib.auth.models import User
 from django.db.models import QuerySet
 
 from rest_framework import serializers, views
 
 from common.models import DataOutput
+from common.settings import get_global_setting
 from InvenTree.helpers import current_date
 from plugin import PluginMixinEnum
 
@@ -55,12 +58,70 @@ class DataExportMixin:
         # By default, plugins support all models
         return True
 
-    def generate_filename(self, model_class, export_format: str) -> str:
-        """Generate a filename for the exported data."""
-        model = model_class.__name__
-        date = current_date().isoformat()
+    DEFAULT_FILENAME_TEMPLATE = 'InvenTree_{{ model }}_{{ date }}'
 
-        return f'InvenTree_{model}_{date}.{export_format}'
+    @staticmethod
+    def _sanitize_filename_component(value: str) -> str:
+        """Return a filesystem-safe filename component."""
+
+        filename = str(value or '').strip()
+
+        for char in ['\\', '/', '\n', '\r', '\t', '\x00']:
+            filename = filename.replace(char, '_')
+
+        return filename.rstrip('.')
+
+    def generate_filename(
+        self,
+        model_class,
+        export_format: str,
+        context: Optional[dict] = None,
+    ) -> str:
+        """Generate a filename for the exported data."""
+
+        model_name = getattr(model_class, '__name__', 'Data')
+
+        meta = getattr(model_class, '_meta', None)
+        verbose_name = getattr(meta, 'verbose_name', model_name) if meta else model_name
+        verbose_name_plural = (
+            getattr(meta, 'verbose_name_plural', verbose_name) if meta else verbose_name
+        )
+
+        base_context = {
+            'model': model_name,
+            'model_verbose_name': verbose_name,
+            'model_verbose_name_plural': verbose_name_plural,
+            'date': current_date().isoformat(),
+            'export_format': export_format,
+        }
+
+        if context:
+            base_context.update(context)
+
+        template_string = get_global_setting(
+            'DATA_EXPORT_FILENAME_TEMPLATE',
+            backup_value=self.DEFAULT_FILENAME_TEMPLATE,
+        )
+
+        filename_root = ''
+
+        try:
+            filename_root = Template(str(template_string)).render(base_context).strip()
+        except Exception:
+            filename_root = ''
+
+        filename_root = self._sanitize_filename_component(filename_root)
+
+        if not filename_root:
+            fallback = f'InvenTree_{model_name}_{base_context["date"]}'
+            filename_root = self._sanitize_filename_component(fallback)
+
+        extension = f'.{export_format}'
+
+        if filename_root.lower().endswith(extension.lower()):
+            return filename_root
+
+        return f'{filename_root}{extension}'
 
     def update_headers(
         self, headers: OrderedDict, context: dict, **kwargs

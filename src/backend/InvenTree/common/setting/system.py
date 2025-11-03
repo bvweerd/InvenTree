@@ -60,6 +60,32 @@ def validate_part_name_format(value):
     return True
 
 
+def validate_export_filename_template(value):
+    """Validate the exporter filename template."""
+
+    class DummyPart:
+        name = 'Example Part'
+        IPN = 'IPN-001'
+        revision = 'A'
+
+    try:
+        rendered = Template(str(value or '')).render({
+            'model': 'Part',
+            'model_verbose_name': 'part',
+            'model_verbose_name_plural': 'parts',
+            'date': '2024-01-01',
+            'export_format': 'csv',
+            'part': DummyPart,
+        })
+    except Exception as exc:
+        raise ValidationError({'value': str(exc)})
+
+    if not str(rendered).strip():
+        raise ValidationError({'value': _('Template must produce a non-empty value')})
+
+    return True
+
+
 def update_instance_name(setting):
     """Update the first site objects name to instance name."""
     if not django_settings.SITE_MULTI:
@@ -1073,6 +1099,14 @@ SYSTEM_SETTINGS: dict[str, InvenTreeSettingsKeyType] = {
         'default': False,
         'validator': bool,
         'after_save': reload_plugin_registry,
+    },
+    'DATA_EXPORT_FILENAME_TEMPLATE': {
+        'name': _('Data export filename template'),
+        'description': _(
+            'Template used to build exported filenames. The extension is added automatically.'
+        ),
+        'default': 'InvenTree_{{ model }}_{{ date }}',
+        'validator': validate_export_filename_template,
     },
     'PROJECT_CODES_ENABLED': {
         'name': _('Enable project codes'),

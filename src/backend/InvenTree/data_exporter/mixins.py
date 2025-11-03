@@ -1,7 +1,8 @@
 """Mixin classes for the exporter app."""
 
+import inspect
 from collections import OrderedDict
-from typing import Any
+from typing import Any, Optional
 
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
@@ -17,7 +18,7 @@ import data_exporter.serializers
 import data_exporter.tasks
 import InvenTree.exceptions
 from common.models import DataOutput
-from InvenTree.helpers import str2bool
+from InvenTree.helpers import current_date, str2bool
 from InvenTree.tasks import offload_task
 from plugin import PluginMixinEnum, registry
 
@@ -222,6 +223,139 @@ class DataExportViewMixin:
     and this will be returned to the client (including a download link to the exported file).
     """
 
+    @staticmethod
+    def _plugin_accepts_filename_context(plugin) -> bool:
+        """Return True if the plugin `generate_filename` method accepts a `context` kwarg."""
+
+        method = getattr(plugin, 'generate_filename', None)
+
+        if method is None:
+            return False
+
+        try:
+            signature = inspect.signature(method)
+        except (TypeError, ValueError):
+            return False
+
+        return any(
+            parameter.kind == inspect.Parameter.VAR_KEYWORD or name == 'context'
+            for name, parameter in signature.parameters.items()
+        )
+
+    def _get_query_param(self, key: str) -> Optional[str]:
+        """Fetch a query parameter value from the request in both API and background contexts."""
+
+        params = getattr(self.request, 'query_params', {}) or {}
+
+        if hasattr(params, 'getlist'):
+            values = params.getlist(key)
+            if values:
+                return values[0]
+            return None
+
+        value = params.get(key)
+
+        if isinstance(value, list):
+            return value[0] if value else None
+
+        return value
+
+    @staticmethod
+    def _get_part_instance(part_ref) -> Optional['Part']:
+        """Return a Part instance from the provided reference, if possible."""
+
+        if part_ref in [None, '', 0]:
+            return None
+
+        try:
+            from part.models import Part
+        except Exception:  # pragma: no cover - app always available in normal runtime
+            return None
+
+        try:
+            part_id = int(part_ref)
+        except (TypeError, ValueError):
+            return None
+
+        return Part.objects.filter(pk=part_id).first()
+
+    def _extract_part_from_queryset(self, queryset) -> Optional['Part']:
+        """Attempt to resolve a Part instance associated with the export queryset."""
+
+        if queryset is None:
+            return None
+
+        try:
+            from part.models import Part
+        except Exception:  # pragma: no cover
+            return None
+
+        model = getattr(queryset, 'model', None)
+
+        if model is Part:
+            return queryset.first()
+
+        instance = queryset.first()
+
+        if not instance:
+            return None
+
+        related_part = getattr(instance, 'part', None)
+
+        if isinstance(related_part, Part):
+            return related_part
+
+        if isinstance(related_part, int):
+            return Part.objects.filter(pk=related_part).first()
+
+        return None
+
+    def _build_export_filename_context(
+        self,
+        model_class,
+        queryset,
+        export_context: dict,
+        export_format: str,
+        plugin,
+    ) -> dict:
+        """Construct the context dictionary used when generating export filenames."""
+
+        context: dict = {
+            'model': getattr(model_class, '__name__', ''),
+            'date': current_date().isoformat(),
+            'export_format': export_format,
+            'plugin': plugin,
+            'export_options': export_context,
+        }
+
+        meta = getattr(model_class, '_meta', None)
+
+        if meta:
+            context['model_verbose_name'] = getattr(meta, 'verbose_name', '')
+            context['model_verbose_name_plural'] = getattr(meta, 'verbose_name_plural', '')
+            context['model_app_label'] = getattr(meta, 'app_label', '')
+
+        user = getattr(self.request, 'user', None)
+
+        if user and getattr(user, 'is_authenticated', False):
+            context['user'] = user
+
+        params = getattr(self.request, 'query_params', {}) or {}
+        context['query_params'] = params
+
+        part = self._get_part_instance(export_context.get('part')) if export_context else None
+
+        if part is None:
+            part = self._get_part_instance(self._get_query_param('part'))
+
+        if part is None:
+            part = self._extract_part_from_queryset(queryset)
+
+        if part:
+            context['part'] = part
+
+        return context
+
     def is_exporting(self) -> bool:
         """Determine if the view is currently exporting data."""
         if request := getattr(self, 'request', None):
@@ -347,10 +481,23 @@ class DataExportViewMixin:
         # Construct 'default' headers (note: may be overridden by plugin)
         headers = serializer.generate_headers()
 
+        filename_context = self._build_export_filename_context(
+            serializer_class.Meta.model,
+            queryset,
+            export_context,
+            export_format,
+            export_plugin,
+        )
+
         # Generate a filename for the exported data (implemented by the plugin)
         try:
+            filename_kwargs = {}
+
+            if self._plugin_accepts_filename_context(export_plugin):
+                filename_kwargs['context'] = filename_context
+
             filename = export_plugin.generate_filename(
-                serializer_class.Meta.model, export_format
+                serializer_class.Meta.model, export_format, **filename_kwargs
             )
         except Exception as e:
             InvenTree.exceptions.log_error(
